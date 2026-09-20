@@ -1,25 +1,26 @@
-from dotenv import load_dotenv
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.messages import HumanMessage
 
-from app.tools import get_company_information
+from app.graph import graph
 
-load_dotenv()
 
-llm = ChatGoogleGenerativeAI(
-    model="gemini-3.8-flash"
+result = graph.invoke(
+    {
+        "messages": [
+            HumanMessage(
+                content="Research Acme Manufacturing and tell me what the company does."
+            )
+        ]
+    }
 )
 
-llm_with_tools = llm.bind_tools(
-    [get_company_information]
-)
 
-response = llm_with_tools.invoke(
-    """
-    I need information about Acme Manufacturing.
+for message in result["messages"]:
+    print("\n---")
+    print(type(message).__name__)
 
-    Use the available company information tool to find
-    information about this company.
-    """
-)
+    if message.content:
+        print(message.content)
 
-print(response)
+    if hasattr(message, "tool_calls") and message.tool_calls:
+        print("TOOL CALLS:")
+        print(message.tool_calls)
