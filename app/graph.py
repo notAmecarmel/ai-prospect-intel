@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode
+from app.schemas import CompanyAnalysis
 
 from app.tools import get_company_information
 
@@ -19,6 +20,7 @@ load_dotenv()
 # -----------------------------
 class AgentState(TypedDict):
     messages: Annotated[list[AnyMessage], add_messages]
+    company_analysis: CompanyAnalysis | None
 
 
 # -----------------------------
@@ -40,6 +42,10 @@ llm = ChatGoogleGenerativeAI(
 
 llm_with_tools = llm.bind_tools(tools)
 
+structured_llm = llm.with_structured_output(
+    CompanyAnalysis
+)
+
 
 # -----------------------------
 # Nodes
@@ -54,6 +60,32 @@ def agent_node(state: AgentState):
         "messages": [response]
     }
 
+def analysis_node(state: AgentState):
+    tool_messages = [
+        message
+        for message in state["messages"]
+        if message.type == "tool"
+    ]
+
+    company_information = tool_messages[-1].content
+
+    result = structured_llm.invoke(
+        [
+            {
+                "role": "user",
+                "content": (
+                    "Analyze the following company information "
+                    "and identify the company's industry, target "
+                    "customers, problems, and potential AI opportunities.\n\n"
+                    f"Company information:\n{company_information}"
+                ),
+            }
+        ]
+    )
+
+    return {
+        "company_analysis": result
+    }
 
 # -----------------------------
 # Routing
@@ -77,6 +109,7 @@ builder = StateGraph(AgentState)
 
 builder.add_node("agent", agent_node)
 builder.add_node("tools", tool_node)
+builder.add_node("analysis", analysis_node)
 
 builder.add_edge(START, "agent")
 
@@ -85,10 +118,11 @@ builder.add_conditional_edges(
     should_continue,
     {
         "tools": "tools",
-        "end": END,
+        "end": "analysis",
     },
 )
 
 builder.add_edge("tools", "agent")
+builder.add_edge("analysis", END)
 
 graph = builder.compile()

@@ -7,20 +7,33 @@ result = graph.invoke(
     {
         "messages": [
             HumanMessage(
-                content="Research Acme Manufacturing and tell me what the company does."
+                content=(
+                    "Research Acme Manufacturing and identify "
+                    "its industry, target customers, problems, "
+                    "and potential AI opportunities."
+                )
             )
-        ]
+        ],
+        "company_analysis": None,
     }
 )
 
 
-for message in result["messages"]:
-    print("\n---")
-    print(type(message).__name__)
+print("\n=== COMPANY ANALYSIS ===")
 
-    if message.content:
-        print(message.content)
+analysis = result["company_analysis"]
 
-    if hasattr(message, "tool_calls") and message.tool_calls:
-        print("TOOL CALLS:")
-        print(message.tool_calls)
+print("\nCompany:", analysis.company_name)
+print("Industry:", analysis.industry)
+
+print("\nTarget Customers:")
+for customer in analysis.target_customers:
+    print("-", customer)
+
+print("\nProblems:")
+for problem in analysis.problems:
+    print("-", problem)
+
+print("\nAI Opportunities:")
+for opportunity in analysis.ai_opportunities:
+    print("-", opportunity)
