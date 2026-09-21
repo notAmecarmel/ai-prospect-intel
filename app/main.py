@@ -15,6 +15,8 @@ result = graph.invoke(
             )
         ],
         "company_analysis": None,
+        "pain_points": [],
+        "ai_opportunities": [],
     }
 )
 
@@ -34,6 +36,14 @@ print("\nProblems:")
 for problem in analysis.problems:
     print("-", problem)
 
-print("\nAI Opportunities:")
-for opportunity in analysis.ai_opportunities:
+
+print("\n=== PAIN POINTS ===")
+
+for pain_point in result["pain_points"]:
+    print("-", pain_point)
+
+
+print("\n=== AI OPPORTUNITIES ===")
+
+for opportunity in result["ai_opportunities"]:
     print("-", opportunity)

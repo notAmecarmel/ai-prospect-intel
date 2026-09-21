@@ -21,6 +21,8 @@ load_dotenv()
 class AgentState(TypedDict):
     messages: Annotated[list[AnyMessage], add_messages]
     company_analysis: CompanyAnalysis | None
+    pain_points: list[str]
+    ai_opportunities: list[str]
 
 
 # -----------------------------
@@ -87,6 +89,54 @@ def analysis_node(state: AgentState):
         "company_analysis": result
     }
 
+def pain_point_node(state: AgentState):
+    analysis = state["company_analysis"]
+
+    result = llm.with_structured_output(
+        list[str]
+    ).invoke(
+        [
+            {
+                "role": "user",
+                "content": (
+                    "Based on the following company analysis, "
+                    "identify the most important operational or "
+                    "business pain points this company is likely "
+                    "to have.\n\n"
+                    f"Company analysis:\n{analysis}"
+                ),
+            }
+        ]
+    )
+
+    return {
+        "pain_points": result
+    }
+
+def opportunity_node(state: AgentState):
+    analysis = state["company_analysis"]
+    pain_points = state["pain_points"]
+
+    result = llm.with_structured_output(
+        list[str]
+    ).invoke(
+        [
+            {
+                "role": "user",
+                "content": (
+                    "Identify practical AI opportunities for this "
+                    "company based on its business analysis and "
+                    "pain points.\n\n"
+                    f"Company analysis:\n{analysis}\n\n"
+                    f"Pain points:\n{pain_points}"
+                ),
+            }
+        ]
+    )
+
+    return {
+        "ai_opportunities": result
+    }
 # -----------------------------
 # Routing
 # -----------------------------
@@ -110,6 +160,8 @@ builder = StateGraph(AgentState)
 builder.add_node("agent", agent_node)
 builder.add_node("tools", tool_node)
 builder.add_node("analysis", analysis_node)
+builder.add_node("pain_points", pain_point_node)
+builder.add_node("opportunities", opportunity_node)
 
 builder.add_edge(START, "agent")
 
